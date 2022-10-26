@@ -1,9 +1,8 @@
 import random
 import time
+from threading import Thread
 
 flag = False
-
-
 
 # An event triggers the init_leader_election
 def init_leader_election(currNode):
@@ -24,18 +23,16 @@ def init_leader_election(currNode):
             print("I am the leader")
 
             # proceed to publish the block
-            time.sleep(5)
-            data = {"event":"Block Published","message":""}
-            currNode.send_to_nodes(data)
-            currNode.prevLeader = currNode
+            x = Thread(target=publish_block,args=(currNode,))
+            y = Thread(target=heartbeat,args= (currNode,))
+            x.start()
+            y.start()
 
     # Clean up Code
     currNode.stop_leaderElection.clear()
     currNode.votes =0    
     currNode.leader = None    
     currNode.electionProcess = False
-
-
 
 # to choose whether the current node standing for leader should be elected or not
 def leader_election(currNode,senderNode,data):
@@ -57,4 +54,15 @@ def decide_senderNode_leader(currNode,senderNode,data):
         currNode.send_to_nodes(data)
 
 
+def heartbeat(currNode):
+    while not currNode.published:
+        print("heartbeat testing ...")
+        data = {"event":"Heartbeat","message":"Heartbeat from leader"}
+        currNode.send_to_nodes(data)
+        time.sleep(3)
 
+def publish_block(currNode):
+    time.sleep(15)
+    data = {"event":"Block Published","message":""}
+    currNode.send_to_nodes(data)
+    currNode.published = True

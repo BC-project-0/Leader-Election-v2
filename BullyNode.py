@@ -16,11 +16,11 @@ class BullyNode(Node):
 
     leader = None
     prevLeader = None
+    published = False
     
     def node_message(self, node, data):
         if data['event'] == "Checking":
             print(data)
-        
         
         if self.leader == None:
             if node.id > self.id and  data['event'] == "Leader Election"  and data['message']=="I want to be the leader" :
@@ -33,7 +33,6 @@ class BullyNode(Node):
                     self.electionProcess = True
                     x = threading.Thread(target = leader_election,args=(self,node,data,))
                     x.start()
-
             
             if data['event'] == "Leader Election" and data['message'] == ("Accept "+str(self.id)) :
                 print("Received accept from "+str(node.id)) #debug
@@ -46,11 +45,16 @@ class BullyNode(Node):
             self.leader = node
             self.votes = 0
 
+        #heartbeat message printing
+        if data["event"] == "Heartbeat":
+            print(data["message"])
+
         # After block is published .. New message is sent to reset leader
         if data['event'] =="Block Published":
             print("Block Published by Leader")
             self.leader = None
             self.stop_leaderElection.clear()
+            self.published = False
 
     def node_disconnect_with_outbound_node(self,node):
         print("Diconnecting from ->",node)
