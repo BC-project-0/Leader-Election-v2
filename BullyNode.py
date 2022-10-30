@@ -6,9 +6,11 @@ from BullyAlgo import *
 
 class BullyNode(Node):
     
-    def __init__(self, host, port, id=None, callback=None, max_connections=0):
+    def __init__(self, host, port, id=None, callback=None, max_connections=0, connections = 0):
         super(BullyNode, self).__init__(host, port, id, callback, max_connections)
-        #print("BullyNode : Started v5")
+        self.connections = connections
+        self.probability = 50 - ((int(id)*8.1) % 50)
+
     
     electionProcess = False # used to identity whether current node is contesting for leader or not
     votes = 0
@@ -25,7 +27,6 @@ class BullyNode(Node):
         if self.leader == None:
             if node.id > self.id and  data['event'] == "Leader Election"  and data['message']=="I want to be the leader" :
                 print("Higher node "+str(node.id)+" to be leader") #debug
-                decide_senderNode_leader(self,node,data)
                 self.stop_leaderElection.set()
 
             if data['event'] == "Leader Election"  and data['message']=="I want to be the leader" :
@@ -34,9 +35,6 @@ class BullyNode(Node):
                     x = threading.Thread(target = leader_election,args=(self,node,data,))
                     x.start()
             
-            if data['event'] == "Leader Election" and data['message'] == ("Accept "+str(self.id)) :
-                print("Received accept from "+str(node.id)) #debug
-                self.votes += 1
 
         # Once leader is set then other nodes's response are invalid
         if data['event'] == "Leader Elected" and data['message'] == "I am leader" :
@@ -58,11 +56,3 @@ class BullyNode(Node):
 
     def node_disconnect_with_outbound_node(self,node):
         print("Diconnecting from ->",node)
-
-
-
-
-
-    
-    
-
