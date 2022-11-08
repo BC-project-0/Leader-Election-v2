@@ -1,6 +1,7 @@
 import random
 import time
 from threading import Thread
+from random import choices
 
 flag = False
 
@@ -8,25 +9,24 @@ flag = False
 def init_leader_election(currNode):
     print()
     print("I want to be the leader")
-    if currNode.leader == None and currNode.prevLeader!=currNode:   # Making sure same node is not leader
+    if currNode.leader == None:  # Broadcasting message to other nodes stating this nodes wants to stand for leadere
         data = {"event":"Leader Election","message":"I want to be the leader"}
         currNode.send_to_nodes(data)
-    time.sleep(15)  # waits for 60 seconds for replies
+    time.sleep(15)  # waits for 15 seconds for replies
 
     # If some higher node wants to be leader then stop_leaderElection is set to True
-    if not currNode.stop_leaderElection.is_set():
-        if currNode.votes >= 1: # might be removed 
-            # Majority voted yes
+    if not currNode.stop_leaderElection.is_set():        
             
-            data = {"event":"Leader Elected","message":"I am leader"}
-            currNode.send_to_nodes(data)      
-            print("I am the leader")
+        data = {"event":"Leader Elected","message":"I am leader"}
+        currNode.send_to_nodes(data)  
+        currNode.probability = 0;     
+        print("I am the leader")
 
-            # proceed to publish the block
-            x = Thread(target=publish_block,args=(currNode,))
-            y = Thread(target=heartbeat,args= (currNode,))
-            x.start()
-            y.start()
+        # proceed to publish the block
+        x = Thread(target=publish_block,args=(currNode,))
+        y = Thread(target=heartbeat,args= (currNode,))
+        x.start()
+        y.start()
 
     # Clean up Code
     currNode.stop_leaderElection.clear()
@@ -34,24 +34,28 @@ def init_leader_election(currNode):
     currNode.leader = None    
     currNode.electionProcess = False
 
+# Function to generate True or false based on conditional probability
+def random_value_gen(node):
+    if(node.probability < 50) and (node.probability + (50 / node.connections) < 50):
+        node.probability += (10 / node.connections)
+    num  = choices(['true','false'],[node.probability,50 - node.probability], k=5).count('true')
+    ans  = num / 5 ;
+    if ans < 0.7:
+        return False
+    else:
+        return True
+
 # to choose whether the current node standing for leader should be elected or not
 def leader_election(currNode,senderNode,data):
-    wantToBeLeader =  bool(random.choice([True, False])) 
+    wantToBeLeader =  random_value_gen(currNode) 
     if senderNode.id < currNode.id :
         if wantToBeLeader == True:
             init_leader_election(currNode)
             currNode.electionProcess = False
     
     if wantToBeLeader == False:
-        decide_senderNode_leader(currNode,senderNode,data)
         currNode.electionProcess = False
     
-
-def decide_senderNode_leader(currNode,senderNode,data):    
-    choice =   bool(random.choice([True, False]))
-    if choice == True:
-        data = {"event":"Leader Election","message":("Accept "+str(senderNode.id))}
-        currNode.send_to_nodes(data)
 
 
 def heartbeat(currNode):
@@ -66,3 +70,4 @@ def publish_block(currNode):
     data = {"event":"Block Published","message":""}
     currNode.send_to_nodes(data)
     currNode.published = True
+    print("BLOCK PUBLISHED")

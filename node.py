@@ -7,7 +7,7 @@ from BullyAlgo import *
 N=6  # Manually setting no of nodes
 id = sys.argv[1]
 print('Node '+id)
-node = BullyNode("127.0.0.1", 8000+int(id), id = id)
+node = BullyNode("127.0.0.1", 8000+int(id), id = id, connections = N)
 node.start()
 time.sleep(5)
 
