@@ -2,7 +2,7 @@ import sys
 import time
 from BullyNode import BullyNode
 from BullyAlgo import *
-import rsa
+import os
 
 N=6  # Manually setting no of nodes
 id = sys.argv[1]
@@ -39,6 +39,7 @@ while True:
     # Broadcasting public keys to all other nodes connected with us
         key_msg = {"event":"Public Key Broadcast","message":open("pk"+str(node.id)+".pem").read()}
         node.send_to_nodes(key_msg)
+        os.remove("pk"+str(node.id)+".pem")
     if choice==5:
         print(node.all_nodes)
     if choice==6:

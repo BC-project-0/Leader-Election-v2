@@ -44,6 +44,7 @@ class BullyNode(Node):
                     x.start()
 
         if data['event']=="Public Key Broadcast":
+            
             self.connected_keys[node.id] = RSA.import_key(data["message"])
             print("Public Key Recieved from node:"+str(node.id))
 
