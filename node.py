@@ -45,3 +45,6 @@ while True:
     if choice==6:
         print("Connected Keys:")
         print(node.connected_keys)
+    if choice==7:
+        txt = input("Enter your message:")
+        node.send_encrypted_msg(txt)
