@@ -32,34 +32,35 @@ class BullyNode(Node):
     published = False
 
     def node_message(self, node, data):
-        if data['event'] == "Checking":
-            # converting to bytes using base64 
-            data['message'] = base64.b64decode(bytes(data['message'], 'utf8'))
+        def decrypt(self,data):
+            data = base64.b64decode(bytes(data, 'utf8'))
             private_key = self.keys['private_key']    
 
             file_temp = open("temp.bin",'wb');
-            file_temp.write(data['message'])
+            file_temp.write(data)
             file_temp.close()
 
-            # file_temp = open("temp.bin","rb")
+            file_temp = open("temp.bin","rb")
 
-            # priKey  = RSA.import_key(private_key)
-            # enc_session_key, nonce, tag, ciphertext = [ file_temp.read(x) for x in (priKey.size_in_bytes(), 16, 16, -1) ]
+            priKey  = RSA.import_key(private_key)
+            enc_session_key, nonce, tag, ciphertext = [ file_temp.read(x) for x in (priKey.size_in_bytes(), 16, 16, -1) ]
 
-            # cipher_rsa = PKCS1_OAEP.new(private_key)
-            # session_key = cipher_rsa.decrypt(enc_session_key)
+            cipher_rsa = PKCS1_OAEP.new(priKey)
+            session_key = cipher_rsa.decrypt(enc_session_key)
 
-            # cipher_aes = AES.new(session_key, AES.MODE_EAX, nonce)
-            # data = cipher_aes.decrypt_and_verify(ciphertext, tag)
-            # print(data.decode("utf-8"))
+            cipher_aes = AES.new(session_key, AES.MODE_EAX, nonce)
+            plain_text = cipher_aes.decrypt_and_verify(ciphertext, tag)
+            file_temp.close()
+            
+            return plain_text.decode("utf-8")
 
-
+        
         if self.leader == None:
-            if node.id > self.id and data['event'] == "Leader Election" and data['message'] == "I want to be the leader":
+            if node.id > self.id and data['event'] == "Leader Election" and decrypt(self,data['message']) == "I want to be the leader":
                 print("Higher node "+str(node.id)+" to be leader")  # debug
                 self.stop_leaderElection.set()
 
-            if data['event'] == "Leader Election" and data['message'] == "I want to be the leader":
+            if data['event'] == "Leader Election" and decrypt(self,data['message']) == "I want to be the leader":
                 if self.electionProcess == False:
                     self.electionProcess = True
                     x = threading.Thread(
@@ -79,17 +80,20 @@ class BullyNode(Node):
 
         if data['event']=="Key Exchange Reply":
             self.connected_keys[node.id] = (RSA.import_key(data["message"]))
+            return
 
         # Once leader is set then other nodes's response are invalid
-        if data['event'] == "Leader Elected" and data['message'] == "I am leader":
+        if data['event'] == "Leader Elected" and decrypt(self,data['message']) == "I am leader":
             print("From "+str(node.id)+" : It is the leader")
             self.prevLeader = node
             self.leader = node
             self.votes = 0
+            return
 
         # heartbeat message printing
         if data["event"] == "Heartbeat":
-            print(data["message"])
+            print(decrypt(self,data["message"]))
+            return
 
         # After block is published .. New message is sent to reset leader
         if data['event'] == "Block Published":
@@ -97,11 +101,13 @@ class BullyNode(Node):
             self.leader = None
             self.stop_leaderElection.clear()
             self.published = False
+            return
 
     def node_disconnect_with_outbound_node(self, node):
         print("Diconnecting from ->", node)
+        return
 
-    def send_encrypted_msg(self,msg):  # note to nitheesh decryption encryption works cant send bytes thru sockets as of now and sending ciphertext made with resp                                 # pub keys also works
+    def send_encrypted_msg(self,event,msg):  # note to nitheesh decryption encryption works cant send bytes thru sockets as of now and sending ciphertext made with resp                                 # pub keys also works
         for node in self.all_nodes:
             session_key = get_random_bytes(16)
             pk = self.connected_keys[node.id]
@@ -117,8 +123,7 @@ class BullyNode(Node):
             txt = open("encrypted_data.bin","rb").read()
             # Convterting to string using base64
             b64_txt = str(base64.b64encode(txt), 'utf8')
-            data = {"event":"Checking","message":b64_txt}
-            # print(txt)            
-            # print(data)
+            data = {"event":event,"message":b64_txt}
             self.send_to_node(node,data)
-            print("sent")
+            # print("sent")
+        return

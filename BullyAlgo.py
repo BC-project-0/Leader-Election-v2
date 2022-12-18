@@ -10,15 +10,15 @@ def init_leader_election(currNode):
     print()
     print("I want to be the leader")
     if currNode.leader == None:  # Broadcasting message to other nodes stating this nodes wants to stand for leadere
-        data = {"event":"Leader Election","message":"I want to be the leader"}
-        currNode.send_to_nodes(data)
+        event,data = "Leader Election","I want to be the leader"
+        currNode.send_encrypted_msg(event,data)
     time.sleep(15)  # waits for 15 seconds for replies
 
     # If some higher node wants to be leader then stop_leaderElection is set to True
     if not currNode.stop_leaderElection.is_set():        
             
-        data = {"event":"Leader Elected","message":"I am leader"}
-        currNode.send_to_nodes(data)  
+        event,data = "Leader Elected","I am leader"
+        currNode.send_encrypted_msg(event,data)  
         currNode.probability = 0;     
         print("I am the leader")
 
@@ -61,13 +61,13 @@ def leader_election(currNode,senderNode,data):
 def heartbeat(currNode):
     while not currNode.published:
         print("heartbeat testing ...")
-        data = {"event":"Heartbeat","message":"Heartbeat from leader"}
-        currNode.send_to_nodes(data)
+        event,data = "Heartbeat","Heartbeat from leader"
+        currNode.send_encrypted_msg(event,data)
         time.sleep(3)
 
 def publish_block(currNode):
     time.sleep(15)
-    data = {"event":"Block Published","message":""}
-    currNode.send_to_nodes(data)
+    event,data = "Block Published",""
+    currNode.send_encrypted_msg(event,data)
     currNode.published = True
     print("BLOCK PUBLISHED")

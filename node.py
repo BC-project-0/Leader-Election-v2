@@ -27,7 +27,7 @@ os.remove("pk"+str(node.id)+".pem")
 while True:
     print()
     print()
-    print("1) Start Leader Election \n2) Check Prev leader\n3) Terminate Master\n4) Test \n5) Print all nodes \n6) Check Keys")
+    print("1) Start Leader Election \n2) Check Prev leader\n3) Terminate Master\n4) Print all nodes \n5) Check Keys")
     print()
     print()
     
@@ -42,10 +42,7 @@ while True:
         node.stop()
         break
     if choice==4:
-        txt = input("Enter your message:")
-        node.send_encrypted_msg(txt)
-    if choice==5:
         print(node.all_nodes)
-    if choice==6:
+    if choice==5:
         print("Connected Keys:")
         print(node.connected_keys)
