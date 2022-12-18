@@ -5,6 +5,7 @@ from BullyAlgo import *
 from Crypto.PublicKey import RSA
 from Crypto.Random import get_random_bytes
 from Crypto.Cipher import AES, PKCS1_OAEP
+import base64
 import os
 
 class BullyNode(Node):
@@ -32,10 +33,25 @@ class BullyNode(Node):
 
     def node_message(self, node, data):
         if data['event'] == "Checking":
-            det = data['message'].split(",")
-            for i in det:
-                print(i,type(i))
-                print()
+            # converting to bytes using base64 
+            data['message'] = base64.b64decode(bytes(data['message'], 'utf8'))
+            private_key = self.keys['private_key']    
+
+            file_temp = open("temp.bin",'wb');
+            file_temp.write(data['message'])
+            file_temp.close()
+
+            # file_temp = open("temp.bin","rb")
+
+            # priKey  = RSA.import_key(private_key)
+            # enc_session_key, nonce, tag, ciphertext = [ file_temp.read(x) for x in (priKey.size_in_bytes(), 16, 16, -1) ]
+
+            # cipher_rsa = PKCS1_OAEP.new(private_key)
+            # session_key = cipher_rsa.decrypt(enc_session_key)
+
+            # cipher_aes = AES.new(session_key, AES.MODE_EAX, nonce)
+            # data = cipher_aes.decrypt_and_verify(ciphertext, tag)
+            # print(data.decode("utf-8"))
 
 
         if self.leader == None:
@@ -99,6 +115,10 @@ class BullyNode(Node):
             file_out.close()
 
             txt = open("encrypted_data.bin","rb").read()
-            data = {"event":"Checking","message":txt}
-            self.send_to_node(self,node,data)
+            # Convterting to string using base64
+            b64_txt = str(base64.b64encode(txt), 'utf8')
+            data = {"event":"Checking","message":b64_txt}
+            # print(txt)            
+            # print(data)
+            self.send_to_node(node,data)
             print("sent")
