@@ -50,11 +50,19 @@ class BullyNode(Node):
                         target=leader_election, args=(self, node, data,))
                     x.start()
 
-        if data['event']=="Public Key Broadcast":
-
+        if data['event']=="Key Exchange Request":
             self.connected_keys[node.id] = (RSA.import_key(data["message"]))
-            print("Public Key Recieved from node:"+str(node.id))
+            
+            pk = open("pk"+str(self.id)+".pem","wb")
+            pk.write(self.keys["public_key"])
+            pk.close()
+    # Broadcasting public keys to all other nodes connected with us
+            key_msg = {"event":"Key Exchange Reply","message":open("pk"+str(self.id)+".pem").read()}
+            self.send_to_node(node,key_msg)
+            os.remove("pk"+str(self.id)+".pem")
 
+        if data['event']=="Key Exchange Reply":
+            self.connected_keys[node.id] = (RSA.import_key(data["message"]))
 
         # Once leader is set then other nodes's response are invalid
         if data['event'] == "Leader Elected" and data['message'] == "I am leader":
@@ -77,44 +85,20 @@ class BullyNode(Node):
     def node_disconnect_with_outbound_node(self, node):
         print("Diconnecting from ->", node)
 
-    def send_encrypted_msg(self,msg):  # note to nitheesh decryption encryption works cant send bytes thru sockets as of now and sending ciphertext made with resp 
-                                        # pub keys also works
-        # for node in self.all_nodes:
-            # session_key = get_random_bytes(16)
-            # pk = self.connected_keys[node.id]
-            # cipher_rsa = PKCS1_OAEP.new(pk)
-            # enc_session_key = cipher_rsa.encrypt(session_key)
-            # cipher_aes = AES.new(session_key, AES.MODE_EAX)
-            # ciphertext, tag = cipher_aes.encrypt_and_digest(msg.encode("utf-8"))
-        session_key = get_random_bytes(16)
-        pubk = RSA.import_key(self.keys["public_key"])
-        pvtk = RSA.import_key(self.keys["private_key"])
-        cipher_rsa = PKCS1_OAEP.new(pubk)
-        enc_session_key = cipher_rsa.encrypt(session_key)
-        cipher_aes = AES.new(session_key, AES.MODE_EAX)
-        ciphertext, tag = cipher_aes.encrypt_and_digest(msg.encode("utf-8"))
+    def send_encrypted_msg(self,msg):  # note to nitheesh decryption encryption works cant send bytes thru sockets as of now and sending ciphertext made with resp                                 # pub keys also works
+        for node in self.all_nodes:
+            session_key = get_random_bytes(16)
+            pk = self.connected_keys[node.id]
+            cipher_rsa = PKCS1_OAEP.new(pk)
+            enc_session_key = cipher_rsa.encrypt(session_key)
+            cipher_aes = AES.new(session_key, AES.MODE_EAX)
+            ciphertext, tag = cipher_aes.encrypt_and_digest(msg.encode("utf-8"))
 
-        print("CipherText:",str(ciphertext))
+            file_out = open("encrypted_data.bin", "wb")
+            [ file_out.write(x) for x in (enc_session_key, cipher_aes.nonce, tag, ciphertext) ]
+            file_out.close()
 
-        file_out = open("encrypted_data.bin", "wb")
-
-        [ file_out.write(x) for x in (enc_session_key, cipher_aes.nonce, tag, ciphertext) ]
-        file_out.close()
-
-        file_in = open("encrypted_data.bin", "rb")
-
-        enc_session_key, nonce, tag, ciphertext = \
-        [ file_in.read(x) for x in (pvtk.size_in_bytes(), 16, 16, -1) ]
-
-        cipher_rsa = PKCS1_OAEP.new(pvtk)
-        session_key = cipher_rsa.decrypt(enc_session_key)
-
-# Decrypt the data with the AES session key
-        cipher_aes = AES.new(session_key, AES.MODE_EAX, nonce)
-        plaintext = cipher_aes.decrypt_and_verify(ciphertext, tag)
-
-        print("PlainText:",str(plaintext.decode('utf-8')))
-
-            
-            #data = {"event":"Checking","message":det.read()}
-            #self.send_to_node(node,data,'none')
+            txt = open("encrypted_data.bin","rb").read()
+            data = {"event":"Checking","message":txt}
+            self.send_to_node(self,node,data)
+            print("sent")
